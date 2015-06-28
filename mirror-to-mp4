@@ -39,12 +39,19 @@ while read -r file; do
   fi
 done <<< "$(find "$location" -type f -name "*.mp4")"
 
-# first attempt convert what is not there
-for ext in "${extensions[@]}"; do
-  while read -r file; do
-    convert "$file" "$ext"
-  done <<< "$(find "$location" -type f -name "*${ext}")"
+# convert to the -o -name structure that find uses for find multiple files
+# so there we don't have to loop for each file extension
+searchnames=""
+for ext in "${extensions[@]/#/*}"; do
+  searchnames="${searchnames} -o -name \"$ext\""
 done
+# remove the first -o
+searchnames="${searchnames:4}"
+
+# first attempt convert what is not there
+while read -r file; do
+  convert "$file" "$ext"
+done <<< "$(find "$location" -type f $searchnames)"
 
 # second attempt assume it was a not divisble by 2 error, attempt to fix
 while read -r file; do
@@ -61,3 +68,5 @@ while read -r file; do
   done
 # failure results in a 0 byte file, take advantage to reconvert
 done <<< "$(find . -type f -size 0)"
+
+# TODO: Remove files that are no longer in original location
