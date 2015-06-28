@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+# TODO: output directory
+
+# the video files to convert
+extensions=(".flv" ".mpg" ".mpeg" ".mpe" ".mov" ".avi" ".mkv" ".asf" ".wmv" ".webm")
+# remove trailing slashes
+location=$(dirname "$1")/$(basename "$1")
+
+# find the available extensions
+# find "$location" -type f -print0 | xargs -0 basename | awk -F. '{ print $(NF) }' | sort -u
+
+# convert to mp4
+function convert {
+  dname=$(dirname "$1")
+  bname=$(basename "$1" "$2")
+  # mirror the folder structure locally
+  folder="${dname/$location/.}"
+  if [ "$folder" != "." ]; then
+    mkdir -p "$folder"
+  fi
+  # clobbers stdin so pass in /dev/null
+  ffmpeg -i "$1" $3 -q:v 0 -c:v libx264 -c:a libfaac "${folder}/${bname}.mp4" < /dev/null
+}
+
+# copy over the mp4 files first
+while read -r file; do
+  dname=$(dirname "$file")
+  bname=$(basename "$file")
+  # mirror the folder structure locally
+  folder="${dname/$location/.}"
+  if [ "$folder" != "." ]; then
+    mkdir -p "$folder"
+  fi
+  cp -v "$file" "${folder}/${bname}"
+done <<< "$(find "$location" -type f -name "*.mp4")"
+
+# first attempt convert what is not there
+for ext in "${extensions[@]}"; do
+  while read -r file; do
+    convert "$file" "$ext"
+  done <<< "$(find "$location" -type f -name "*${ext}")"
+done
+
+# second attempt assume it was a not divisble by 2 error, attempt to fix
+while read -r file; do
+  name=$(basename "$file" ".mp4")
+  # attempt to find the original to convert
+  for ext in "${extensions[@]}"; do
+    original="$(find "$location" -type f -name "${name}${ext}")"
+    if [ "$original" != "" ]; then
+      # assume height not divisble by 2 error and attempt to round down 1 pixel
+      # force overwrite (-y)
+      convert "$original" "$ext" "-vf scale='trunc(iw/2)*2:trunc(ih/2)*2' -y"
+      break
+    fi
+  done
+# failure results in a 0 byte file, take advantage to reconvert
+done <<< "$(find . -type f -size 0)"
