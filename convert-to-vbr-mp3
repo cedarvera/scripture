@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+while read -r file; do
+  dname=$(dirname "$file")
+  bname=$(basename "$file" ".flac")
+  name="${dname} - ${bname}.mp3"
+  # clobbers stdin so pass in /dev/null
+  ffmpeg -i "$file" -f mp3 -q:a 0 "$name" < /dev/null
+done <<< "$(find "$1" -type f -maxdepth 2 -name '*.flac')"
