@@ -3,7 +3,7 @@
 # TODO: output directory
 
 # the video files to convert
-extensions=(".flv" ".mpg" ".mpeg" ".mpe" ".mov" ".avi" ".mkv" ".asf" ".wmv" ".webm")
+extensions=(".flv" ".mpg" ".mpeg" ".mpe" ".mov" ".avi" ".mkv" ".asf" ".wmv" ".rmvb" ".webm")
 # remove trailing slashes
 location=$(dirname "$1")/$(basename "$1")
 
@@ -23,7 +23,7 @@ function convert {
   ffmpeg -i "$1" $3 -q:v 0 -c:v libx264 -c:a libfaac "${folder}/${bname}.mp4" < /dev/null
 }
 
-# copy over the mp4 files first
+# copy over the mp4 files first if not there
 while read -r file; do
   dname=$(dirname "$file")
   bname=$(basename "$file")
@@ -32,7 +32,11 @@ while read -r file; do
   if [ "$folder" != "." ]; then
     mkdir -p "$folder"
   fi
-  cp -v "$file" "${folder}/${bname}"
+  target="${folder}/${bname}"
+  # only copy if file is not there
+  if [ -f "$target" ]; then
+    cp -v "$file" "$target"
+  fi
 done <<< "$(find "$location" -type f -name "*.mp4")"
 
 # first attempt convert what is not there
