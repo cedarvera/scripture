@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+if [ $# -eq 0 ]; then
+  num=4
+else
+  num=$1
+fi
+
+beg=1
+end=`wc -l /usr/share/dict/words | awk '{ print $1 }'`
+
+jot -r $num $beg $end | xargs -I{} sh -c "head -{} /usr/share/dict/words | tail -1"
